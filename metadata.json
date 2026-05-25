@@ -1,0 +1,10 @@
+{
+  "name": "SIGAP GUGUS 1 CIKAMPEK PRODUCTION",
+  "description": "Sistem Integrasi Guru, Absensi, dan Penilaian: Prototipe manajemen absensi, izin, dan kependidikan untuk Guru, Kepala Sekolah, dan Pengawas gugus 1 Cikampek.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

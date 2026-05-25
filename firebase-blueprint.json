@@ -1,0 +1,183 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Profile data for teachers, principals, and supervisors.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nama": { "type": "string" },
+        "nip": { "type": "string" },
+        "sekolah": { "type": "string" },
+        "schoolId": { "type": "string" },
+        "district": { "type": "string" },
+        "role": { "type": "string", "enum": ["GURU", "KEPALA_SEKOLAH", "PENGAWAS"] },
+        "status": { "type": "string", "enum": ["ACTIVE", "INACTIVE", "PENDING_APPROVAL"] },
+        "password": { "type": "string" },
+        "avatar": { "type": "string" },
+        "jabatan": { "type": "string" },
+        "kelas": { "type": "string" }
+      },
+      "required": ["id", "nama", "role", "sekolah"]
+    },
+    "SchoolInfo": {
+      "title": "School Info",
+      "description": "Details about educational institutions within the system.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "alamat": { "type": "string" },
+        "npsn": { "type": "string" },
+        "district": { "type": "string" },
+        "status": { "type": "string" },
+        "akreditasi": { "type": "string" },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "radius": { "type": "number" }
+      },
+      "required": ["id", "name"]
+    },
+    "Attendance": {
+      "title": "Attendance Record",
+      "description": "Daily check-in and check-out tracking for users.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "schoolId": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "type": { "type": "string", "enum": ["IN", "OUT"] },
+        "location": { "type": "string" },
+        "isManual": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] },
+        "reason": { "type": "string" },
+        "isAtSchool": { "type": "boolean" }
+      },
+      "required": ["id", "userId", "timestamp", "type", "location"]
+    },
+    "DocumentInfo": {
+      "title": "Document Information",
+      "description": "Metadata for educational files, RPPs, RKTs, and best practices uploaded by teachers or principals.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "schoolId": { "type": "string" },
+        "fileName": { "type": "string" },
+        "type": { "type": "string", "enum": ["RPP_LENGKAP", "RAPOR", "RKT", "KSP", "PRAKTIK_BAIK", "PRAKTIK_BAIK_KS", "SUPERVISI", "MATERI"] },
+        "uploadDate": { "type": "string" },
+        "status": { "type": "string", "enum": ["PENDING", "APPROVED", "REVISION"] },
+        "feedback": { "type": "string" },
+        "category": { "type": "string", "enum": ["MONTHLY", "ANNUAL", "SYSTEM"] },
+        "score": { "type": "number" },
+        "link": { "type": "string" },
+        "teacherId": { "type": "string" },
+        "sekolah": { "type": "string" }
+      },
+      "required": ["id", "userId", "fileName", "type", "uploadDate", "status"]
+    },
+    "Announcement": {
+      "title": "Announcement",
+      "description": "Broadcasts, alerts, and news shared with members.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "authorId": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "attachmentUrl": { "type": "string" },
+        "attachmentName": { "type": "string" },
+        "attachmentType": { "type": "string", "enum": ["image", "pdf", "doc"] }
+      },
+      "required": ["id", "title", "content", "authorId", "timestamp"]
+    },
+    "MaterialPost": {
+      "title": "Material Post",
+      "description": "Post sharing pedagogic materials, best practices, comments, and reactions.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "authorId": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "attachmentUrl": { "type": "string" },
+        "attachmentName": { "type": "string" },
+        "mediaType": { "type": "string", "enum": ["image", "video", "article"] },
+        "mediaUrl": { "type": "string" },
+        "likes": { "type": "array" },
+        "comments": { "type": "array" }
+      },
+      "required": ["id", "content", "authorId", "timestamp"]
+    },
+    "Permission": {
+      "title": "Permission",
+      "description": "Leave requests, permits, and off-duty notes filed by users.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "schoolId": { "type": "string" },
+        "type": { "type": "string", "enum": ["CUTI", "IZIN", "DINAS_LUAR"] },
+        "leaveType": { "type": "string" },
+        "startDate": { "type": "string" },
+        "endDate": { "type": "string" },
+        "reason": { "type": "string" },
+        "status": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] },
+        "uploadDate": { "type": "string" }
+      },
+      "required": ["id", "userId", "type", "startDate", "endDate", "reason", "status", "uploadDate"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "System-generated push alerts notifying users about actions.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "isRead": { "type": "boolean" },
+        "type": { "type": "string", "enum": ["UPLOAD", "APPROVAL", "REVISION", "PERMISSION"] }
+      },
+      "required": ["id", "userId", "title", "message", "timestamp", "isRead", "type"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Stores Profile data for each registered user."
+    },
+    "schools/{schoolId}": {
+      "schema": { "$ref": "#/entities/SchoolInfo" },
+      "description": "Stores details about the registered schools."
+    },
+    "attendance/{attendanceId}": {
+      "schema": { "$ref": "#/entities/Attendance" },
+      "description": "Stores check-in and check-out reports for instructors."
+    },
+    "documents/{documentId}": {
+      "schema": { "$ref": "#/entities/DocumentInfo" },
+      "description": "Contains system-uploaded documents and teaching resources."
+    },
+    "announcements/{announcementId}": {
+      "schema": { "$ref": "#/entities/Announcement" },
+      "description": "Platform-wide bulletin board announcements."
+    },
+    "materialPosts/{postId}": {
+      "schema": { "$ref": "#/entities/MaterialPost" },
+      "description": "Material posts and associated interactions (likes, comments)."
+    },
+    "permissions/{permissionId}": {
+      "schema": { "$ref": "#/entities/Permission" },
+      "description": "Tracks leave requests and dynamic out-of-office forms."
+    },
+    "notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/Notification" },
+      "description": "Pre-generated alert banners informing user profiles of events."
+    }
+  }
+}

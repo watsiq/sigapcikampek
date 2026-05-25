@@ -1,0 +1,183 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- Global Safety Net ---
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Hardened Global Helpers ---
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return true;
+    }
+
+    // --- Entity Specific Validation Blueprints ---
+
+    function isValidUserProfile(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.nama is string && data.nama.size() <= 256
+        && data.sekolah is string && data.sekolah.size() <= 256
+        && data.role in ['GURU', 'KEPALA_SEKOLAH', 'PENGAWAS']
+        && (!('nip' in data) || data.nip == null || (data.nip is string && data.nip.size() <= 64))
+        && (!('schoolId' in data) || data.schoolId == null || (data.schoolId is string && data.schoolId.size() <= 128))
+        && (!('district' in data) || data.district == null || (data.district is string && data.district.size() <= 128))
+        && (!('status' in data) || data.status == null || (data.status is string && data.status.size() <= 64))
+        && (!('password' in data) || data.password == null || (data.password is string && data.password.size() <= 256))
+        && (!('avatar' in data) || data.avatar == null || (data.avatar is string && data.avatar.size() <= 512))
+        && (!('jabatan' in data) || data.jabatan == null || (data.jabatan is string && data.jabatan.size() <= 256))
+        && (!('kelas' in data) || data.kelas == null || (data.kelas is string && data.kelas.size() <= 64));
+    }
+
+    function isValidSchoolInfo(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.name is string && data.name.size() <= 256
+        && (!('alamat' in data) || data.alamat == null || (data.alamat is string && data.alamat.size() <= 512))
+        && (!('npsn' in data) || data.npsn == null || (data.npsn is string && data.npsn.size() <= 64))
+        && (!('district' in data) || data.district == null || (data.district is string && data.district.size() <= 128))
+        && (!('status' in data) || data.status == null || (data.status is string && data.status.size() <= 64))
+        && (!('akreditasi' in data) || data.akreditasi == null || (data.akreditasi is string && data.akreditasi.size() <= 32))
+        && (!('radius' in data) || data.radius is number)
+        && (!('lat' in data) || data.lat is number)
+        && (!('lng' in data) || data.lng is number);
+    }
+
+    function isValidAttendance(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.userId is string && data.userId.size() <= 128
+        && data.timestamp is string && data.timestamp.size() <= 64
+        && data.type in ['IN', 'OUT']
+        && data.location is string && data.location.size() <= 512
+        && (!('isManual' in data) || data.isManual is bool)
+        && (!('status' in data) || data.status in ['PENDING', 'APPROVED', 'REJECTED'])
+        && (!('reason' in data) || data.reason == null || (data.reason is string && data.reason.size() <= 1024))
+        && (!('isAtSchool' in data) || data.isAtSchool is bool)
+        && (!('schoolId' in data) || data.schoolId == null || (data.schoolId is string && data.schoolId.size() <= 128));
+    }
+
+    function isValidDocument(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.userId is string && data.userId.size() <= 128
+        && data.fileName is string && data.fileName.size() <= 256
+        && data.type in ['RPP_LENGKAP', 'RAPOR', 'RKT', 'KSP', 'PRAKTIK_BAIK', 'PRAKTIK_BAIK_KS', 'SUPERVISI', 'MATERI']
+        && data.uploadDate is string && data.uploadDate.size() <= 64
+        && data.status in ['PENDING', 'APPROVED', 'REVISION']
+        && (!('feedback' in data) || data.feedback == null || (data.feedback is string && data.feedback.size() <= 2048))
+        && (!('category' in data) || data.category in ['MONTHLY', 'ANNUAL', 'SYSTEM'])
+        && (!('score' in data) || data.score == null || data.score is number)
+        && (!('link' in data) || data.link == null || (data.link is string && data.link.size() <= 1024))
+        && (!('teacherId' in data) || data.teacherId == null || (data.teacherId is string && data.teacherId.size() <= 128))
+        && (!('sekolah' in data) || data.sekolah == null || (data.sekolah is string && data.sekolah.size() <= 256))
+        && (!('schoolId' in data) || data.schoolId == null || (data.schoolId is string && data.schoolId.size() <= 128));
+    }
+
+    function isValidAnnouncement(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.title is string && data.title.size() <= 256
+        && data.content is string && data.content.size() <= 8192
+        && data.authorId is string && data.authorId.size() <= 128
+        && data.timestamp is string && data.timestamp.size() <= 64
+        && (!('attachmentUrl' in data) || data.attachmentUrl == null || (data.attachmentUrl is string && data.attachmentUrl.size() <= 1024))
+        && (!('attachmentName' in data) || data.attachmentName == null || (data.attachmentName is string && data.attachmentName.size() <= 256))
+        && (!('attachmentType' in data) || data.attachmentType == null || data.attachmentType in ['image', 'pdf', 'doc']);
+    }
+
+    function isValidMaterialPost(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.content is string && data.content.size() <= 8192
+        && data.authorId is string && data.authorId.size() <= 128
+        && data.timestamp is string && data.timestamp.size() <= 64
+        && (!('title' in data) || data.title == null || (data.title is string && data.title.size() <= 256))
+        && (!('attachmentUrl' in data) || data.attachmentUrl == null || (data.attachmentUrl is string && data.attachmentUrl.size() <= 1024))
+        && (!('attachmentName' in data) || data.attachmentName == null || (data.attachmentName is string && data.attachmentName.size() <= 256))
+        && (!('mediaType' in data) || data.mediaType == null || data.mediaType in ['image', 'video', 'article'])
+        && (!('mediaUrl' in data) || data.mediaUrl == null || (data.mediaUrl is string && data.mediaUrl.size() <= 1024))
+        && (!('likes' in data) || data.likes is list)
+        && (!('comments' in data) || data.comments is list);
+    }
+
+    function isValidPermission(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.userId is string && data.userId.size() <= 128
+        && data.type in ['CUTI', 'IZIN', 'DINAS_LUAR']
+        && data.startDate is string && data.startDate.size() <= 64
+        && data.endDate is string && data.endDate.size() <= 64
+        && data.reason is string && data.reason.size() <= 2048
+        && data.status in ['PENDING', 'APPROVED', 'REJECTED']
+        && data.uploadDate is string && data.uploadDate.size() <= 64
+        && (!('leaveType' in data) || data.leaveType == null || (data.leaveType is string && data.leaveType.size() <= 128))
+        && (!('schoolId' in data) || data.schoolId == null || (data.schoolId is string && data.schoolId.size() <= 128));
+    }
+
+    function isValidNotification(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.userId is string && data.userId.size() <= 128
+        && data.title is string && data.title.size() <= 256
+        && data.message is string && data.message.size() <= 2048
+        && data.timestamp is string && data.timestamp.size() <= 64
+        && data.isRead is bool
+        && data.type in ['UPLOAD', 'APPROVAL', 'REVISION', 'PERMISSION'];
+    }
+
+    // --- Collections Routing Rules ---
+
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidUserProfile(incoming());
+      allow delete: if isSignedIn();
+    }
+
+    match /schools/{schoolId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSignedIn() && isValidSchoolInfo(incoming());
+    }
+
+    match /attendance/{attendanceId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidAttendance(incoming());
+      allow delete: if isSignedIn();
+    }
+
+    match /documents/{documentId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidDocument(incoming());
+      allow delete: if isSignedIn();
+    }
+
+    match /announcements/{announcementId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidAnnouncement(incoming());
+      allow delete: if isSignedIn();
+    }
+
+    match /materialPosts/{postId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidMaterialPost(incoming());
+      allow delete: if isSignedIn();
+    }
+
+    match /permissions/{permissionId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidPermission(incoming());
+      allow delete: if isSignedIn();
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidNotification(incoming());
+      allow delete: if isSignedIn();
+    }
+  }
+}

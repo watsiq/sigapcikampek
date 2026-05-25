@@ -1,0 +1,229 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- Global Safety Net ---
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Hardened Global Helpers ---
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userExists(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId));
+    }
+
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
+    }
+
+    function isRole(userId, role) {
+      return isSignedIn() && userExists(userId) && getUserData(userId).role == role;
+    }
+
+    function isGuru(userId) {
+      return isRole(userId, 'GURU');
+    }
+
+    // Checking if the active user is a Principal (Kepala Sekolah)
+    function isKS(userId) {
+      return isRole(userId, 'KEPALA_SEKOLAH');
+    }
+
+    // Checking if the active user is a Supervisor (Pengawas)
+    function isPengawas(userId) {
+      return isRole(userId, 'PENGAWAS');
+    }
+
+    // --- Entity Specific Validation Blueprints ---
+
+    function isValidUserProfile(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.nama is string && data.nama.size() <= 256
+        && data.sekolah is string && data.sekolah.size() <= 256
+        && data.role in ['GURU', 'KEPALA_SEKOLAH', 'PENGAWAS']
+        && (!data.keys().contains('nip') || (data.nip is string && data.nip.size() <= 64))
+        && (!data.keys().contains('schoolId') || (data.schoolId is string && data.schoolId.size() <= 128))
+        && (!data.keys().contains('district') || (data.district is string && data.district.size() <= 128))
+        && (!data.keys().contains('status') || (data.status is string && data.status.size() <= 64))
+        && (!data.keys().contains('password') || (data.password is string && data.password.size() <= 256))
+        && (!data.keys().contains('avatar') || (data.avatar is string && data.avatar.size() <= 512))
+        && (!data.keys().contains('jabatan') || (data.jabatan is string && data.jabatan.size() <= 256))
+        && (!data.keys().contains('kelas') || (data.kelas is string && data.kelas.size() <= 64));
+    }
+
+    function isValidSchoolInfo(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.name is string && data.name.size() <= 256
+        && (!data.keys().contains('alamat') || (data.alamat is string && data.alamat.size() <= 512))
+        && (!data.keys().contains('npsn') || (data.npsn is string && data.npsn.size() <= 64))
+        && (!data.keys().contains('district') || (data.district is string && data.district.size() <= 128))
+        && (!data.keys().contains('status') || (data.status is string && data.status.size() <= 64))
+        && (!data.keys().contains('akreditasi') || (data.akreditasi is string && data.akreditasi.size() <= 32))
+        && (!data.keys().contains('radius') || data.radius is number)
+        && (!data.keys().contains('lat') || data.lat is number)
+        && (!data.keys().contains('lng') || data.lng is number);
+    }
+
+    function isValidAttendance(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.userId is string && data.userId.size() <= 128
+        && data.timestamp is string && data.timestamp.size() <= 64
+        && data.type in ['IN', 'OUT']
+        && data.location is string && data.location.size() <= 512
+        && (!data.keys().contains('isManual') || data.isManual is bool)
+        && (!data.keys().contains('status') || data.status in ['PENDING', 'APPROVED', 'REJECTED'])
+        && (!data.keys().contains('reason') || (data.reason is string && data.reason.size() <= 1024))
+        && (!data.keys().contains('isAtSchool') || data.isAtSchool is bool)
+        && (!data.keys().contains('schoolId') || (data.schoolId is string && data.schoolId.size() <= 128));
+    }
+
+    function isValidDocument(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.userId is string && data.userId.size() <= 128
+        && data.fileName is string && data.fileName.size() <= 256
+        && data.type in ['RPP_LENGKAP', 'RAPOR', 'RKT', 'KSP', 'PRAKTIK_BAIK', 'PRAKTIK_BAIK_KS', 'SUPERVISI', 'MATERI']
+        && data.uploadDate is string && data.uploadDate.size() <= 64
+        && data.status in ['PENDING', 'APPROVED', 'REVISION']
+        && (!data.keys().contains('feedback') || (data.feedback is string && data.feedback.size() <= 2048))
+        && (!data.keys().contains('category') || data.category in ['MONTHLY', 'ANNUAL', 'SYSTEM'])
+        && (!data.keys().contains('score') || data.score is number)
+        && (!data.keys().contains('link') || (data.link is string && data.link.size() <= 1024))
+        && (!data.keys().contains('teacherId') || (data.teacherId is string && data.teacherId.size() <= 128))
+        && (!data.keys().contains('sekolah') || (data.sekolah is string && data.sekolah.size() <= 256))
+        && (!data.keys().contains('schoolId') || (data.schoolId is string && data.schoolId.size() <= 128));
+    }
+
+    function isValidAnnouncement(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.title is string && data.title.size() <= 256
+        && data.content is string && data.content.size() <= 8192
+        && data.authorId is string && data.authorId.size() <= 128
+        && data.timestamp is string && data.timestamp.size() <= 64
+        && (!data.keys().contains('attachmentUrl') || (data.attachmentUrl is string && data.attachmentUrl.size() <= 1024))
+        && (!data.keys().contains('attachmentName') || (data.attachmentName is string && data.attachmentName.size() <= 256))
+        && (!data.keys().contains('attachmentType') || data.attachmentType in ['image', 'pdf', 'doc']);
+    }
+
+    function isValidMaterialPost(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.content is string && data.content.size() <= 8192
+        && data.authorId is string && data.authorId.size() <= 128
+        && data.timestamp is string && data.timestamp.size() <= 64
+        && (!data.keys().contains('title') || (data.title is string && data.title.size() <= 256))
+        && (!data.keys().contains('attachmentUrl') || (data.attachmentUrl is string && data.attachmentUrl.size() <= 1024))
+        && (!data.keys().contains('attachmentName') || (data.attachmentName is string && data.attachmentName.size() <= 256))
+        && (!data.keys().contains('mediaType') || data.mediaType in ['image', 'video', 'article'])
+        && (!data.keys().contains('mediaUrl') || (data.mediaUrl is string && data.mediaUrl.size() <= 1024))
+        && (!data.keys().contains('likes') || data.likes is list)
+        && (!data.keys().contains('comments') || data.comments is list);
+    }
+
+    function isValidPermission(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.userId is string && data.userId.size() <= 128
+        && data.type in ['CUTI', 'IZIN', 'DINAS_LUAR']
+        && data.startDate is string && data.startDate.size() <= 64
+        && data.endDate is string && data.endDate.size() <= 64
+        && data.reason is string && data.reason.size() <= 2048
+        && data.status in ['PENDING', 'APPROVED', 'REJECTED']
+        && data.uploadDate is string && data.uploadDate.size() <= 64
+        && (!data.keys().contains('leaveType') || (data.leaveType is string && data.leaveType.size() <= 128))
+        && (!data.keys().contains('schoolId') || (data.schoolId is string && data.schoolId.size() <= 128));
+    }
+
+    function isValidNotification(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.userId is string && data.userId.size() <= 128
+        && data.title is string && data.title.size() <= 256
+        && data.message is string && data.message.size() <= 2048
+        && data.timestamp is string && data.timestamp.size() <= 64
+        && data.isRead is bool
+        && data.type in ['UPLOAD', 'APPROVAL', 'REVISION', 'PERMISSION'];
+    }
+
+    // --- Collections Routing Rules ---
+
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && userId == request.auth.uid && isValidUserProfile(incoming());
+      allow update: if isSignedIn() && (
+        (userId == request.auth.uid && isValidUserProfile(incoming()) && incoming().role == existing().role && incoming().status == existing().status && incoming().schoolId == existing().schoolId) ||
+        isPengawas(request.auth.uid)
+      );
+      allow delete: if isSignedIn() && isPengawas(request.auth.uid);
+    }
+
+    match /schools/{schoolId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSignedIn() && isPengawas(request.auth.uid) && isValidSchoolInfo(incoming());
+    }
+
+    match /attendance/{attendanceId} {
+      allow read: if isSignedIn() && (existing().userId == request.auth.uid || isKS(request.auth.uid) || isPengawas(request.auth.uid));
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidAttendance(incoming());
+      allow update: if isSignedIn() && (isKS(request.auth.uid) || isPengawas(request.auth.uid)) && isValidAttendance(incoming());
+      allow delete: if isSignedIn() && isPengawas(request.auth.uid);
+    }
+
+    match /documents/{documentId} {
+      allow read: if isSignedIn() && (existing().userId == request.auth.uid || isKS(request.auth.uid) || isPengawas(request.auth.uid));
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidDocument(incoming()) && incoming().status == 'PENDING';
+      allow update: if isSignedIn() && (
+        (incoming().userId == request.auth.uid && existing().userId == request.auth.uid && isValidDocument(incoming()) && incoming().diff(existing()).affectedKeys().hasOnly(['fileName', 'uploadDate'])) ||
+        (isKS(request.auth.uid) && isValidDocument(incoming()) && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'feedback', 'score'])) ||
+        (isPengawas(request.auth.uid) && isValidDocument(incoming()) && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'feedback', 'score']))
+      );
+      allow delete: if isSignedIn() && (existing().userId == request.auth.uid || isPengawas(request.auth.uid));
+    }
+
+    match /announcements/{announcementId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && (isKS(request.auth.uid) || isPengawas(request.auth.uid)) && isValidAnnouncement(incoming());
+      allow delete: if isSignedIn() && (isKS(request.auth.uid) || isPengawas(request.auth.uid));
+    }
+
+    match /materialPosts/{postId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && incoming().authorId == request.auth.uid && isValidMaterialPost(incoming());
+      allow update: if isSignedIn() && (
+        (incoming().authorId == request.auth.uid && isValidMaterialPost(incoming())) ||
+        (incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'comments']) && isValidMaterialPost(incoming()))
+      );
+      allow delete: if isSignedIn() && (existing().authorId == request.auth.uid || isPengawas(request.auth.uid));
+    }
+
+    match /permissions/{permissionId} {
+      allow read: if isSignedIn() && (existing().userId == request.auth.uid || isKS(request.auth.uid) || isPengawas(request.auth.uid));
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && isValidPermission(incoming()) && incoming().status == 'PENDING';
+      allow update: if isSignedIn() && (
+        (incoming().userId == request.auth.uid && existing().userId == request.auth.uid && isValidPermission(incoming()) && incoming().diff(existing()).affectedKeys().hasOnly(['leaveType', 'startDate', 'endDate', 'reason', 'uploadDate'])) ||
+        (isKS(request.auth.uid) && isValidPermission(incoming()) && incoming().diff(existing()).affectedKeys().hasOnly(['status'])) ||
+        (isPengawas(request.auth.uid) && isValidPermission(incoming()) && incoming().diff(existing()).affectedKeys().hasOnly(['status']))
+      );
+      allow delete: if isSignedIn() && (existing().userId == request.auth.uid || isPengawas(request.auth.uid));
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidNotification(incoming());
+      allow update: if isSignedIn() && existing().userId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['isRead']) && isValidNotification(incoming());
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+  }
+}
